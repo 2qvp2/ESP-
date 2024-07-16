@@ -1,0 +1,77 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+-- Function to create a BillboardGui for ESP around the humanoid
+local function createBillboardGui(character)
+    local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+    
+    local billboardGui = Instance.new("BillboardGui")
+    billboardGui.AlwaysOnTop = true
+    billboardGui.Size = UDim2.new(1.5, 0, 2.5, 0)  -- Adjust size as needed
+    billboardGui.StudsOffset = Vector3.new(0, 2, 0) -- Adjust offset to position it above the character
+    billboardGui.Parent = humanoidRootPart
+    
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(1, 0, 1, 0)
+    frame.BackgroundTransparency = 0.5
+    frame.BackgroundColor3 = Color3.new(1, 0, 0) -- Red color
+    frame.Parent = billboardGui
+    
+    return billboardGui
+end
+
+-- Function to set up ESP using BillboardGui for a given character
+local function setupCharacter(character)
+    local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+    local billboardGui = createBillboardGui(character)
+    
+    -- Update the position of the BillboardGui to follow the character
+    local connection
+    connection = RunService.RenderStepped:Connect(function()
+        if character.Parent == nil then
+            billboardGui:Destroy()
+            connection:Disconnect()
+        else
+            billboardGui.Adornee = humanoidRootPart
+        end
+    end)
+    
+    -- Clean up when the character is removed
+    humanoidRootPart.AncestryChanged:Connect(function(_, parent)
+        if not parent then
+            billboardGui:Destroy()
+            connection:Disconnect()
+        end
+    end)
+end
+
+-- Function to handle new players joining
+local function onPlayerAdded(player)
+    player.CharacterAdded:Connect(function(character)
+        setupCharacter(character)
+    end)
+    
+    if player.Character then
+        setupCharacter(player.Character)
+    end
+end
+
+-- Function to handle players leaving
+local function onPlayerRemoving(player)
+    local character = player.Character
+    if character then
+        local billboardGui = character:FindFirstChildOfClass("BillboardGui")
+        if billboardGui then
+            billboardGui:Destroy()
+        end
+    end
+end
+
+-- Connect events for players joining and leaving
+Players.PlayerAdded:Connect(onPlayerAdded)
+Players.PlayerRemoving:Connect(onPlayerRemoving)
+
+-- Set up for players already in the game
+for _, player in ipairs(Players:GetPlayers()) do
+    onPlayerAdded(player)
+end
